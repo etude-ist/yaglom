@@ -21,6 +21,11 @@ void render(struct renderer_config *r, int a[], int n) {
   }
 
   SDL_RenderPresent(r->renderer);
+  while (SDL_PollEvent(r->event) != 0) {
+    if( r->event->type == SDL_QUIT ) {
+      destroy_SDL(&r);
+    }
+  }
   SDL_Delay(15);
 }
 

@@ -6,6 +6,7 @@ struct renderer_config {
   char *title;
   SDL_Window *window;
   SDL_Renderer *renderer;
+  SDL_Event *event;
 };
 
 int random_int(int n, int m);
