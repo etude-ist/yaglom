@@ -31,7 +31,7 @@ bool initialize_SDL(struct renderer_config *r) {
 
   r->renderer = SDL_CreateRenderer(r->window, -1, SDL_RENDERER_ACCELERATED);
   if (r->renderer == NULL) {
-    SDL_Log("Undable to create renderer: %s", SDL_GetError());
+    SDL_Log("Unable to create renderer: %s", SDL_GetError());
   }
 
   SDL_SetRenderDrawColor(r->renderer, 0xFF, 0xFF, 0XFF, 0xFF);
