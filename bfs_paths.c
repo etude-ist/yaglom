@@ -1,4 +1,7 @@
 #include <stdbool.h>
+#include <stdlib.h>
+
+#include "utils.h"
 
 #define TOP 0
 #define BOTTOM 1
@@ -72,7 +75,34 @@ int neighbour(int current, int direction, int row_length, int capacity) {
 
 bool is_element(int x, bool set[]) { return x >= 0 && x < CAPACITY && set[x]; }
 
-void breadth_first_search(int start, int queue_capacity) {
+void render_bfs(struct renderer_config *r, int n) {
+  SDL_SetRenderDrawColor(r->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+  SDL_RenderClear(r->renderer);
+
+  int rect_side = r->width / n;
+  int color = rand();
+  for (int i = 0; i < CAPACITY; i++) {
+    if (set[i]) {
+      int row = i / n;
+      int column = i % n;
+      // x, y, w, h
+      SDL_Rect fill_rect = {column * rect_side, row * rect_side, rect_side,
+                            rect_side};
+      SDL_SetRenderDrawColor(r->renderer, color, color, rand(), rand());
+      SDL_RenderFillRect(r->renderer, &fill_rect);
+    }
+  }
+  while (SDL_PollEvent(&(r->event)) != 0) {
+    if (r->event.type == SDL_QUIT) {
+      destroy_SDL(&r);
+    }
+  }
+  SDL_RenderPresent(r->renderer);
+  SDL_Delay(50);
+}
+
+void breadth_first_search(struct renderer_confgi *r, int start,
+                          int queue_capacity) {
   struct queue q;
   initialize_queue(&q, queue_capacity);
   enqueue(&q, start);
@@ -88,16 +118,30 @@ void breadth_first_search(int start, int queue_capacity) {
         set[next] = true;
       }
     }
+    render_bfs(r, ROW_LENGTH);
   }
 }
 
-int main() {
+int main(int argc, char *args[]) {
+  struct renderer_config r;
+  r.title = "BFS pattern generator";
+  r.width = 480;
+  r.height = 480;
+  r.window = NULL;
+  r.renderer = NULL;
+
+  if (!initialize_SDL(&r)) {
+    SDL_Log("SDL failed to initialize: %s", SDL_GetError());
+    destroy_SDL(&r);
+  }
 
   for (int i = 0; i < CAPACITY; i++) {
     set[i] = false;
   }
 
-  breadth_first_search(10, CAPACITY);
+  breadth_first_search(&r, 6, CAPACITY);
+  SDL_Delay(2000);
+  destroy_SDL(&r);
 
   return 0;
 }
