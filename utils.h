@@ -1,4 +1,6 @@
-#include "SDL.h"
+#include <stdbool.h>
+#include <SDL.h>
+#include <SDL_image.h>
 
 struct renderer_config {
   int width;
