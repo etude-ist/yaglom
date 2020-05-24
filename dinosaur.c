@@ -2,6 +2,7 @@
 #include "utils.h"
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,11 +13,13 @@ const int HORIZON_BACK = 1;
 const int CACTUS_LARGE = 2;
 const int DINOSAUR = 3;
 const int GAME_OBJECTS_CAP = 4;
-const int MAX_OBSTACLE_LENGTH = 3; // combine with sprite width
-// to determine obstacle length.
+const int MAX_OBSTACLE_LENGTH = 3;
+double TIME_PER_UPDATE = 16.6f;
 int frames = 0;
 bool is_jumping = false;
-int velocity = -15;
+double dino_velocity = -40;
+double gravity = 9.8;
+double world_velocity = 20.0;
 
 typedef struct texture_t {
   int width;
@@ -93,42 +96,57 @@ void initialize(texture_t *t, struct renderer_config *r) {
 }
 
 void update(gamestate_t *game_objects) {
+  double dt = 1.0 / 60.0 * 10;
   for (int i = 0; i < GAME_OBJECTS_CAP; i++) {
     switch (game_objects[i].index) {
     case HORIZON_FRONT:
       if (game_objects[HORIZON_FRONT].x > -WIN_WIDTH) {
-        game_objects[HORIZON_FRONT].x -= 1;
+        game_objects[HORIZON_FRONT].x -= (int)ceil(dt * world_velocity);
       } else {
         game_objects[HORIZON_FRONT].x = 600;
       }
       break;
     case HORIZON_BACK:
       if (game_objects[HORIZON_BACK].x > -WIN_WIDTH) {
-        game_objects[HORIZON_BACK].x -= 1;
+        game_objects[HORIZON_BACK].x -= (int)ceil(dt * world_velocity);
       } else {
         game_objects[HORIZON_BACK].x = 600;
       }
       break;
     case CACTUS_LARGE:
       if (game_objects[CACTUS_LARGE].x > -25) {
-        game_objects[CACTUS_LARGE].x -= 1;
+        game_objects[CACTUS_LARGE].x -= (int)ceil(dt * world_velocity);
       } else {
         game_objects[CACTUS_LARGE].x = 625;
       }
       break;
     case DINOSAUR:
-      if (is_jumping && frames % 15 == 0) {
-	game_objects[DINOSAUR].y += velocity;
-	velocity += 1;
-      }
-      if (game_objects[DINOSAUR].y >= 405 && frames % 15 == 0) {
-	is_jumping = false;
-	velocity = -15;
+      if (is_jumping) {
+        int value;
+        if (dt * dino_velocity < 0) {
+          value = (int)floor(dt * dino_velocity);
+        } else {
+          value = (int)ceil(dt * dino_velocity);
+        }
+        game_objects[DINOSAUR].y += value;
+        dino_velocity += dt * gravity;
+        if (game_objects[DINOSAUR].y >= 405) {
+          is_jumping = false;
+          dino_velocity = -40;
+        }
       }
       break;
     }
   }
   frames += 1;
+  // animate dinosaur
+  if ((frames % 10) == 0) {
+    if (game_objects[DINOSAUR].sprite.x < (848 + 3 * 44)) {
+      game_objects[DINOSAUR].sprite.x += 44;
+    } else {
+      game_objects[DINOSAUR].sprite.x = 848;
+    }
+  }
 }
 
 void render(texture_t *t, struct renderer_config *r,
@@ -146,17 +164,7 @@ void render(texture_t *t, struct renderer_config *r,
                  game_objects[CACTUS_LARGE].y,
                  &(game_objects[CACTUS_LARGE].sprite));
 
-  // animate dinosaur
-  if (frames % 20 == 0) {
-    if (game_objects[DINOSAUR].sprite.x < (848+3*44)) {
-      game_objects[DINOSAUR].sprite.x += 44;
-    } else {
-      game_objects[DINOSAUR].sprite.x = 848;
-    }
-  }
-  
-  texture_render(t, r, game_objects[DINOSAUR].x,
-                 game_objects[DINOSAUR].y,
+  texture_render(t, r, game_objects[DINOSAUR].x, game_objects[DINOSAUR].y,
                  &(game_objects[DINOSAUR].sprite));
 
   SDL_RenderPresent(r->renderer);
@@ -189,14 +197,24 @@ int main(int argc, char *args[]) {
        .y = 410,
        .index = 2,
        .sprite = {.x = 332, .y = 2, .w = 25, .h = 50}},
-      {.x = 10,
+      {.x = 20,
        .y = 405,
        .index = 3,
        .sprite = {.x = 848, .y = 2, .w = 44, .h = 47}}};
 
+  uint64_t current_time = SDL_GetPerformanceCounter();
+  uint64_t last_time = 0;
+  double dt = 0.0;
+  double lag = 0.0;
+
   while (is_rendering) {
 
-    // handle inputs
+    last_time = current_time;
+    current_time = SDL_GetPerformanceCounter();
+    dt = (double)((current_time - last_time) * 1000 /
+                  (double)SDL_GetPerformanceFrequency());
+    lag += dt;
+
     while (SDL_PollEvent(&(r.event)) != 0) {
       switch (r.event.type) {
       case SDL_QUIT:
@@ -207,18 +225,19 @@ int main(int argc, char *args[]) {
         switch (r.event.key.keysym.sym) {
         case SDLK_UP:
         case SDLK_SPACE:
-	  if (!is_jumping) {
-	    // set jumping to true
-	    is_jumping = true;
-	  }
+          if (!is_jumping) {
+            is_jumping = true;
+          }
           SDL_Log("Key up pressed");
         }
       }
     }
 
-    update(game_objects);
+    while (lag >= TIME_PER_UPDATE) {
+      update(game_objects);
+      lag -= TIME_PER_UPDATE;
+    }
     render(&t, &r, game_objects);
-    SDL_Delay(2);
   }
 
   return 0;
