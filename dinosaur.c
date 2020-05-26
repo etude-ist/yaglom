@@ -14,7 +14,7 @@ const int CACTUS_LARGE = 2;
 const int DINOSAUR = 3;
 const int GAME_OBJECTS_CAP = 4;
 const int MAX_OBSTACLE_LENGTH = 3;
-double TIME_PER_UPDATE = 16.6f;
+double TIME_PER_UPDATE = 16.6666f;
 int frames = 0;
 bool is_jumping = false;
 double dino_velocity = -40;
@@ -96,26 +96,27 @@ void initialize(texture_t *t, struct renderer_config *r) {
 }
 
 void update(gamestate_t *game_objects) {
-  double dt = 1.0 / 60.0 * 10;
+  double dt = 1.0 / 60.0 * 10.0;
+  int world_delta = (int)ceil(dt * world_velocity);
   for (int i = 0; i < GAME_OBJECTS_CAP; i++) {
     switch (game_objects[i].index) {
     case HORIZON_FRONT:
-      if (game_objects[HORIZON_FRONT].x > -WIN_WIDTH) {
-        game_objects[HORIZON_FRONT].x -= (int)ceil(dt * world_velocity);
+      if (game_objects[HORIZON_FRONT].x > -565) {
+        game_objects[HORIZON_FRONT].x -= world_delta;
       } else {
-        game_objects[HORIZON_FRONT].x = 600;
+        game_objects[HORIZON_FRONT].x = 565;
       }
       break;
     case HORIZON_BACK:
-      if (game_objects[HORIZON_BACK].x > -WIN_WIDTH) {
-        game_objects[HORIZON_BACK].x -= (int)ceil(dt * world_velocity);
+      if (game_objects[HORIZON_BACK].x > -565) {
+        game_objects[HORIZON_BACK].x -= world_delta;
       } else {
-        game_objects[HORIZON_BACK].x = 600;
+        game_objects[HORIZON_BACK].x = 565;
       }
       break;
     case CACTUS_LARGE:
-      if (game_objects[CACTUS_LARGE].x > -25) {
-        game_objects[CACTUS_LARGE].x -= (int)ceil(dt * world_velocity);
+      if (game_objects[CACTUS_LARGE].x > 0) {
+        game_objects[CACTUS_LARGE].x -= world_delta;
       } else {
         game_objects[CACTUS_LARGE].x = 625;
       }
@@ -189,7 +190,7 @@ int main(int argc, char *args[]) {
        .y = 448,
        .index = 0,
        .sprite = {.x = 2, .y = 54, .w = 600, .h = 12}},
-      {.x = 600,
+      {.x = 565,
        .y = 448,
        .index = 1,
        .sprite = {.x = 600, .y = 54, .w = 600, .h = 12}},
@@ -236,6 +237,9 @@ int main(int argc, char *args[]) {
     while (lag >= TIME_PER_UPDATE) {
       update(game_objects);
       lag -= TIME_PER_UPDATE;
+      if (lag < 0.0) {
+        lag = 0.0;
+      }
     }
     render(&t, &r, game_objects);
   }
